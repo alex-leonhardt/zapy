@@ -35,22 +35,6 @@ def signal_handler(signal, frame):
     sys.exit(0)
 
 
-def fix_encoding(alerts):
-
-    _alerts = []
-
-    for a in alerts:
-        _a = {}
-        for k, v in a.iteritems():
-            k = ''.join([i if ord(i) < 128 else ' ' for i in k])
-            v = ''.join([i if ord(i) < 128 else ' ' for i in v])
-            _a[k] = v
-        assert isinstance(_a, dict)
-        _alerts.append(_a)
-    assert isinstance(_alerts, list)
-    return _alerts
-
-
 def run_spider(zap, target, api_key):
     """
     spider the target
@@ -156,7 +140,6 @@ def main(args=None):
     print('Hosts: ' + ', '.join(zap.core.hosts))
 
     alerts = zap.core.alerts()
-    alerts = fix_encoding(alerts)
 
     if html_report is not None or xml_report is not None:
         reporttype = None
