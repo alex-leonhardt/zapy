@@ -67,8 +67,8 @@ may mean that some attack strings that identified problems may be _skewed_
 
 ## todo
 
-- add ability to install plugins into /opt/zap/plugins
-- add ability to only run a specific scan/plugin against a target or url
+- add ability to install plugins into /opt/zap/plugins (once api supports this)
+- add ability to only run a specific scan against a target or url 
 - maybe run fuzzer against a specific url (?)
 
 ## references 

@@ -85,6 +85,46 @@ def run_active_scan(zap, target, api_key):
         time.sleep(5)
     print('Scan completed')
 
+def gen_report(zap, api_key, alerts, reporttype, report_file, force=False):
+    '''
+    generates a report in `reporttype`
+    :param reporttype: html or xml
+    '''
+
+    if reporttype == 'html':
+
+        # zap.core.htmlreport seems to be broken so we're using json2html for a very basic report in html
+        # report = zap.core.htmlreport()
+
+        if os.path.isfile(report_file) and force is True:
+            try:
+                os.remove(report_file)
+            except IOError as e:
+                print('Unable to remove {0}'.format(report_file))
+        else:
+            print('File {0} exists and --html-force was not used. '
+                  'Please remove file manually and re-run. Exiting.'.format(report_file))
+            sys.exit(1)
+
+        try:
+            with open(report_file, 'a') as f:
+
+                if reporttype == 'html':
+                    templateLoader = jinja2.FileSystemLoader(searchpath=os.path.dirname(os.path.realpath(__file__)))
+                    templateEnv = jinja2.Environment(loader=templateLoader)
+                    TEMPLATE_FILE = "report.html.j2"
+                    template = templateEnv.get_template(TEMPLATE_FILE)
+                    templateVars = {"alerts": alerts}
+
+                    html_alerts = template.render(templateVars)
+                    f.write(html_alerts)
+                elif reporttype == 'xml':
+                    zap.core.xmlreport(apikey=api_key)
+
+
+            print('Success: {1} report saved at {0}'.format(report_file, reporttype.upper()))
+        except Exception as e:
+            print('Error: Unable to save {1} report: {0}'.format(e, reporttype.upper()))
 
 def main(args=None):
     """
@@ -96,6 +136,7 @@ def main(args=None):
         spider = args.spider
         active_scan = args.active_scan
         html_report = args.html_report
+        xml_report = args.xml_report
         force = args.force
     else:
         print('No arguments supplied. Exiting')
@@ -124,37 +165,16 @@ def main(args=None):
     alerts = zap.core.alerts()
     alerts = fix_encoding(alerts)
 
-    #pprint(alerts, indent=4)
-
-    if html_report:
-        # zap.core.htmlreport seems to be broken so we're using json2html for a very basic report in html
-        # report = zap.core.htmlreport()
-        report_file = html_report
-        try:
-
-            if os.path.isfile(report_file) and force is True:
-                try:
-                    os.remove(report_file)
-                except IOError as e:
-                    print('Unable to remove {0}'.format(report_file))
-            else:
-                print ('File {0} exists and --html-force was not used. '
-                       'Please remove file manually and re-run. Exiting.'.format(report_file))
-                sys.exit(1)
-
-            with open(report_file, 'a') as f:
-                templateLoader = jinja2.FileSystemLoader(searchpath=os.path.dirname(os.path.realpath(__file__)))
-                templateEnv = jinja2.Environment(loader=templateLoader)
-                TEMPLATE_FILE = "report.html.j2"
-                template = templateEnv.get_template(TEMPLATE_FILE)
-                templateVars = { "alerts": alerts }
-
-                html_alerts = template.render(templateVars)
-                f.write(html_alerts)
-
-            print ('Success: HTML report saved at {0}'.format(report_file))
-        except Exception as e:
-            print('Error: Unable to save HTML report: {0}'.format(e))
+    if html_report or xml_report:
+        reporttype = None
+        report_file = None
+        if html_report:
+            reporttype = 'html'
+            report_file = html_report
+        elif xml_report:
+            reporttype = 'xml'
+            report_file = xml_report
+        gen_report(zap, api_key, alerts, reporttype, report_file, force)
 
 
 if __name__ == '__main__':
@@ -180,7 +200,11 @@ if __name__ == '__main__':
                         required=False)
 
     parser.add_argument('--html-report',
-                        help="Create a html report in /data/report.html",
+                        help="Create a html report in /path/to/report.html",
+                        required=False)
+
+    parser.add_argument('--xml-report',
+                        help="Create a xml report in /path/to/report.xml",
                         required=False)
 
     parser.add_argument('--force', action='store_true',
