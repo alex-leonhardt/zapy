@@ -129,7 +129,7 @@ def main(args=None):
     if html_report:
         # zap.core.htmlreport seems to be broken so we're using json2html for a very basic report in html
         # report = zap.core.htmlreport()
-        report_file = '/data/report.html'
+        report_file = html_report
         try:
 
             if os.path.isfile(report_file) and force is True:
@@ -143,7 +143,7 @@ def main(args=None):
                 sys.exit(1)
 
             with open(report_file, 'a') as f:
-                templateLoader = jinja2.FileSystemLoader(searchpath=".")
+                templateLoader = jinja2.FileSystemLoader(searchpath=os.path.dirname(os.path.realpath(__file__)))
                 templateEnv = jinja2.Environment(loader=templateLoader)
                 TEMPLATE_FILE = "report.html.j2"
                 template = templateEnv.get_template(TEMPLATE_FILE)
@@ -179,7 +179,7 @@ if __name__ == '__main__':
                         help="Run a active-scan against TARGET",
                         required=False)
 
-    parser.add_argument('--html-report', action='store_true',
+    parser.add_argument('--html-report',
                         help="Create a html report in /data/report.html",
                         required=False)
 
