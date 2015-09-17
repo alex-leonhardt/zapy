@@ -91,40 +91,30 @@ def gen_report(zap, api_key, alerts, reporttype, report_file, force=False):
     :param reporttype: html or xml
     '''
 
-    if reporttype == 'html':
+    # zap.core.htmlreport seems to be broken so we're using json2html for a very basic report in html
+    # report = zap.core.htmlreport()
 
-        # zap.core.htmlreport seems to be broken so we're using json2html for a very basic report in html
-        # report = zap.core.htmlreport()
-
-        if os.path.isfile(report_file) and force is True:
-            try:
-                os.remove(report_file)
-            except IOError as e:
-                print('Unable to remove {0}'.format(report_file))
-        else:
-            print('File {0} exists and --html-force was not used. '
-                  'Please remove file manually and re-run. Exiting.'.format(report_file))
-            sys.exit(1)
-
+    if os.path.isfile(report_file) and force:
         try:
-            with open(report_file, 'a') as f:
-
-                if reporttype == 'html':
-                    templateLoader = jinja2.FileSystemLoader(searchpath=os.path.dirname(os.path.realpath(__file__)))
-                    templateEnv = jinja2.Environment(loader=templateLoader)
-                    TEMPLATE_FILE = "report.html.j2"
-                    template = templateEnv.get_template(TEMPLATE_FILE)
-                    templateVars = {"alerts": alerts}
-
-                    html_alerts = template.render(templateVars)
-                    f.write(html_alerts)
-                elif reporttype == 'xml':
-                    zap.core.xmlreport(apikey=api_key)
-
-
-            print('Success: {1} report saved at {0}'.format(report_file, reporttype.upper()))
-        except Exception as e:
-            print('Error: Unable to save {1} report: {0}'.format(e, reporttype.upper()))
+            os.remove(report_file)
+        except IOError as e:
+            print('Unable to remove {0}'.format(report_file))
+    elif os.path.isfile(report_file):
+        print('File {0} exists and --force was not used. '
+              'Please remove file and re-run your scan. Exiting.'.format(report_file))
+        sys.exit(1)
+    try:
+        with open(report_file, 'a') as f:
+            print ('Creating {0} report..'.format(reporttype.upper()))
+            if reporttype == 'html':
+                html = zap.core.htmlreport(apikey=api_key)
+                f.write(html)
+            elif reporttype == 'xml':
+                xml = zap.core.xmlreport(apikey=api_key)
+                f.write(xml)
+        print('Success: {1} report saved to {0}'.format(report_file, reporttype.upper()))
+    except Exception as e:
+        print('Error: Unable to save {1} report: {0}'.format(e, reporttype.upper()))
 
 def main(args=None):
     """
@@ -165,13 +155,13 @@ def main(args=None):
     alerts = zap.core.alerts()
     alerts = fix_encoding(alerts)
 
-    if html_report or xml_report:
+    if html_report is not None or xml_report is not None:
         reporttype = None
         report_file = None
-        if html_report:
+        if html_report is not None:
             reporttype = 'html'
             report_file = html_report
-        elif xml_report:
+        elif xml_report is not None:
             reporttype = 'xml'
             report_file = xml_report
         gen_report(zap, api_key, alerts, reporttype, report_file, force)
