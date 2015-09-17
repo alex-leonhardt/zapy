@@ -51,16 +51,17 @@ def fix_encoding(alerts):
     return _alerts
 
 
-def run_spider(zap, target):
+def run_spider(zap, target, api_key):
     """
     spider the target
 
     only spiders the target, it will not automatically kick off a active scan
     """
     print('Spidering target {0}'.format(target))
-    zap.spider.set_option_max_depth(5)
+    zap.spider.set_option_scope_string(target, apikey=api_key)
+    zap.spider.set_option_max_depth(10, apikey=api_key)
     zap.spider.set_option_thread_count(3)
-    zap.spider.scan(target, 3)
+    z = zap.spider.scan(target, apikey=api_key)
     # Give the Spider a chance to start
     time.sleep(2)
     while (int(zap.spider.status()) < 100):
@@ -69,7 +70,7 @@ def run_spider(zap, target):
 
     print('Spider completed')
 
-def run_active_scan(zap, target):
+def run_active_scan(zap, target, api_key):
     """
     run a active scan against target using the initialized zap object
 
@@ -77,7 +78,8 @@ def run_active_scan(zap, target):
     use the UI and start an attack against TARGET
     """
     print('Scanning target {0}'.format(target))
-    zap.ascan.scan(target)
+    zap.ascan.scan(target, True, apikey=api_key)
+
     while (int(zap.ascan.status()) < 100):
         print('Scan progress %: ' + zap.ascan.status())
         time.sleep(5)
@@ -90,6 +92,7 @@ def main(args=None):
     """
     if args is not None:
         target = args.target
+        api_key = args.api_key
         spider = args.spider
         active_scan = args.active_scan
         html_report = args.html_report
@@ -101,26 +104,27 @@ def main(args=None):
     zap = ZAPv2()
     # Use the line below if ZAP is not listening on 8090
     # zap = ZAPv2(proxies={'http': 'http://127.0.0.1:8090', 'https': 'http://127.0.0.1:8090'})
-
     print('Accessing target {0}'.format(target))
     zap.urlopen(target)
     time.sleep(2)
 
+    zap.core.delete_all_alerts(apikey=api_key)
+    zap.core.new_session(target, True, apikey=api_key)
+
     if spider:
-        run_spider(zap, target)
+        run_spider(zap, target, api_key)
         time.sleep(5)
 
     if active_scan:
-        run_active_scan(zap, target)
+        run_active_scan(zap, target, api_key)
         time.sleep(5)
 
     print('Hosts: ' + ', '.join(zap.core.hosts))
-    print('Alerts: ')
 
     alerts = zap.core.alerts()
     alerts = fix_encoding(alerts)
 
-    pprint(alerts, indent=4)
+    #pprint(alerts, indent=4)
 
     if html_report:
         # zap.core.htmlreport seems to be broken so we're using json2html for a very basic report in html
@@ -162,6 +166,10 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--target', '-u', '--url',
                         help="The target / url to scan (https://scanme.domain.com)",
                         required=True)
+
+    parser.add_argument('-k', '--api-key',
+                        help="The api key to connect to ZAP",
+                        required=False)
 
     parser.add_argument('-s', '--spider', action='store_true',
                         help="Run spider against TARGET",
