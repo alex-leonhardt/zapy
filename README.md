@@ -4,15 +4,29 @@ Run Zed Attack Proxy from command line
 
 ## spider
 
-currently api call seems to not trigger the spidering of a site
+spidering now works, use ```-s``` to run the spider against ```TARGET```
 
 ## attack
 
-in progress
+this is now working, use ```-a``` to launch an attack against ```TARGET```
 
-## reports
+## html reports
 
-able to create a html report using jinja2 - by defaul this is being put into /data/report.hml for now
+able to create a html report using jinja2 - report path must now be provided ```--html-report /path/to/report.html``` 
+the path must exist and be writable by the user running this script.
+
+## known issues
+
+### reports
+
+when generating reports, some characters are not returned as unicode, the characters are currently just stripped away which
+may mean that some attack strings that identified problems may be _skewed_
+
+## todo
+
+- add ability to install plugins into /opt/zap/plugins
+- add ability to only run a specific scan/plugin against a target or url
+- maybe run fuzzer against a specific url (?)
 
 ## references 
 
