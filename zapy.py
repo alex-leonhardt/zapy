@@ -23,7 +23,7 @@ except ImportError:
 
 
 __author__ = 'ale'
-__package__ = 'zapit'
+__package__ = 'zapy'
 __doc__ = """
 ZapIt is a python script that used the ZAP python API to interact with a headless Zed Attack Proxy.
 Mainly useful to automate runs.
@@ -70,6 +70,7 @@ def run_spider(zap, target, api_key):
 
     print('Spider completed')
 
+
 def run_active_scan(zap, target, api_key):
     """
     run a active scan against target using the initialized zap object
@@ -84,6 +85,7 @@ def run_active_scan(zap, target, api_key):
         print('Scan progress %: ' + zap.ascan.status())
         time.sleep(5)
     print('Scan completed')
+
 
 def gen_report(zap, api_key, alerts, reporttype, report_file, force=False):
     '''
@@ -115,6 +117,7 @@ def gen_report(zap, api_key, alerts, reporttype, report_file, force=False):
         print('Success: {1} report saved to {0}'.format(report_file, reporttype.upper()))
     except Exception as e:
         print('Error: Unable to save {1} report: {0}'.format(e, reporttype.upper()))
+
 
 def main(args=None):
     """
