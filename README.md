@@ -1,4 +1,4 @@
-# zapit
+# zapy
 
 Run Zed Attack Proxy from command line
 
