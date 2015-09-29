@@ -44,7 +44,6 @@ If a report already exists, the script will not generate the report, re-run with
 ./zapy.py -t http://127.0.0.1 --spider --active-scan --html-report /data/scan-report.html --force --api-key aaabbbccddeeffgghh332211 
 ```
 
-
 ## spider
 
 spidering now works, use ```-s``` to run the spider against ```TARGET```
@@ -55,15 +54,7 @@ this is now working, use ```-a``` to launch an attack against ```TARGET```
 
 ## html reports
 
-able to create a html report using jinja2 - report path must now be provided ```--html-report /path/to/report.html``` 
-the path must exist and be writable by the user running this script.
-
-## known issues
-
-### reports
-
-when generating reports, some characters are not returned as unicode, the characters are currently just stripped away which
-may mean that some attack strings that identified problems may be _skewed_
+use ```--html-report /path/to/report.html``` to create a report in /path/to
 
 ## todo
 
