@@ -100,14 +100,14 @@ def gen_report(zap, api_key, alerts, reporttype, report_file, force=False):
         print('Error: Unable to save {1} report: {0}'.format(e, reporttype.upper()))
 
 
-def start_zap(zapsh='/zap/weekly/zap.sh'):
+def start_zap(zapsh='/zap/weekly/zap.sh', apikey='zap'):
     """
     starts zap
     """
     print('Starting ZAP ...')
-    subprocess.Popen([zapsh, '-config', 'api.key=zap', '-daemon'], stdout=open(os.devnull, 'w'))
+    subprocess.Popen([zapsh, '-config', 'api.key=' + apikey, '-daemon'], stdout=open(os.devnull, 'w'))
     print('Waiting for ZAP to load, 10 seconds ...')
-    print('Use api-key "zap" to interact with my API ...')
+    print('Use api-key {0} to interact with my API ...'.format(apikey))
     time.sleep(10)
 
 
@@ -138,7 +138,7 @@ def main(args=None):
         sys.exit(1)
 
     if start:
-        start_zap(zapsh)
+        start_zap(zapsh, api_key)
 
     zap = ZAPv2()
     # Use the line below if ZAP is not listening on 8090
