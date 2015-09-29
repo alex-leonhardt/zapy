@@ -99,15 +99,17 @@ def gen_report(zap, api_key, alerts, reporttype, report_file, force=False):
     except Exception as e:
         print('Error: Unable to save {1} report: {0}'.format(e, reporttype.upper()))
 
-def start_zap():
+
+def start_zap(zapsh='/zap/weekly/zap.sh'):
     """
     starts zap
     """
     print('Starting ZAP ...')
-    subprocess.Popen(['/zap/zap.sh', '-config', 'api.key=zap', '-daemon'], stdout=open(os.devnull, 'w'))
+    subprocess.Popen([zapsh, '-config', 'api.key=zap', '-daemon'], stdout=open(os.devnull, 'w'))
     print('Waiting for ZAP to load, 10 seconds ...')
     print('Use api-key "zap" to interact with my API ...')
     time.sleep(10)
+
 
 def stop_zap(zap):
     """
@@ -123,6 +125,7 @@ def main(args=None):
     if args is not None:
         start = args.start
         stop = args.stop
+        zapsh = args.zapsh
         target = args.target
         api_key = args.api_key
         spider = args.spider
@@ -135,7 +138,7 @@ def main(args=None):
         sys.exit(1)
 
     if start:
-        start_zap()
+        start_zap(zapsh)
 
     zap = ZAPv2()
     # Use the line below if ZAP is not listening on 8090
@@ -177,6 +180,7 @@ def main(args=None):
         if stop:
             stop_zap()
 
+
 if __name__ == '__main__':
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -191,6 +195,11 @@ if __name__ == '__main__':
     parser.add_argument('--stop',
                         help="Stop ZAP locally when scan completed",
                         action='store_true',
+                        required=False)
+
+    parser.add_argument('--zapsh',
+                        default="/zap/weekly/zap.sh",
+                        help="Specify where ZAP's zap.sh is located (default: /zap/weekly/zap.sh)",
                         required=False)
 
     parser.add_argument('-t', '--target', '-u', '--url',
