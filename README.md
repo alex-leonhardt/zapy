@@ -56,6 +56,23 @@ this is now working, use ```-a``` to launch an attack against ```TARGET```
 
 use ```--html-report /path/to/report.html``` to create a report in /path/to
 
+## docker
+
+#### create your own docker file using OWASP's weekly as base
+
+```
+docker build -t me/zap:latest .
+```
+
+#### run it
+
+docker run --rm -ti -v `pwd`:/data me/zap python /zapy/zapy.py \
+    -t http://172.17.0.10 \
+    -s \
+    --start \
+    -k zap \
+    --html-report /data/report.html
+
 ## todo
 
 - add ability to install plugins into /opt/zap/plugins (once api supports this)
