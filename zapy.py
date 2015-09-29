@@ -13,7 +13,7 @@ import os.path
 import subprocess
 
 try:
-    from zapv2 import ZAPv2
+    from zapv2 import ZAPv2, ZapError
 except ImportError:
     print('You need to install zapv2 python module - pip install python-owasp-zap-v2.4')
     sys.exit(1)
@@ -32,7 +32,7 @@ def signal_handler(signal, frame):
     sys.exit(0)
 
 
-def run_spider(zap, target, api_key):
+def run_spider(zap, target, api_key, cid=None, uid=None):
     """
     spider the target
 
@@ -42,9 +42,20 @@ def run_spider(zap, target, api_key):
     zap.spider.set_option_scope_string(target, apikey=api_key)
     zap.spider.set_option_max_depth(10, apikey=api_key)
     zap.spider.set_option_thread_count(3)
-    z = zap.spider.scan(target, apikey=api_key)
+
+    if cid and uid:
+        try:
+            z = zap.spider.scan_as_user(url=target, contextid=cid, userid=uid, maxchildren=0, apikey=api_key)
+        except Exception as e:
+            print('Exception: {0}'.format(e))
+    else:
+        try:
+            z = zap.spider.scan(target, apikey=api_key)
+        except Exception as e:
+            print('Exception: {0}'.format(e))
+
     # Give the Spider a chance to start
-    time.sleep(2)
+    time.sleep(3)
     while (int(zap.spider.status()) < 100):
         print('Spider progress %: ' + zap.spider.status())
         time.sleep(2)
@@ -61,7 +72,7 @@ def run_active_scan(zap, target, api_key):
     """
     print('Scanning target {0}'.format(target))
     zap.ascan.scan(target, True, apikey=api_key)
-
+    time.sleep(3)
     while (int(zap.ascan.status()) < 100):
         print('Scan progress %: ' + zap.ascan.status())
         time.sleep(5)
@@ -98,6 +109,44 @@ def gen_report(zap, api_key, alerts, reporttype, report_file, force=False):
         print('Success: {1} report saved to {0}'.format(report_file, reporttype.upper()))
     except Exception as e:
         print('Error: Unable to save {1} report: {0}'.format(e, reporttype.upper()))
+
+
+def auth(zap, target, api_key):
+    """
+    Setting authentication
+    """
+    # Set the context. Probably useful to have it outside?
+    cname = "context"
+    cid = zap.context.new_context(cname)
+
+    # Set the session management info to HTTP based
+    ret = zap.sessionManagement.set_session_management_method(cid, "httpAuthSessionManagement", apikey=api_key)
+    print(ret)
+
+    ret = zap.authentication.set_authentication_method(cid, 'httpAuthentication', 'hostname={0}&realm=Restricted'.format(target.split('/')[2]), apikey=api_key)
+    print(ret)
+
+    ret = zap.authentication.set_logged_out_indicator(cid, 'Unauthorized', api_key)
+    print(ret)
+
+    # Add the user "profile"
+    uid = zap.users.new_user(cid, "bobby", apikey=api_key)
+    ret = zap.forcedUser.set_forced_user(cid, uid, api_key)
+    print(ret)
+
+    ret = zap.forcedUser.set_forced_user_mode_enabled(True, api_key)
+
+    # Setting auth credentials. Parameters must be x-www-urlencoded.
+    ret = zap.users.set_authentication_credentials(cid, uid, 'username=bobby&password=supersecret', apikey=api_key)
+    print(ret)
+
+    ret = zap.users.set_user_enabled(cid, uid, True, apikey=api_key)
+    print(ret)
+
+    ret = zap.context.include_in_context(cname, target, apikey=api_key)
+    print(ret)
+
+    return cid, uid
 
 
 def start_zap(zapsh='/zap/weekly/zap.sh', apikey='zap'):
@@ -141,44 +190,45 @@ def main(args=None):
         start_zap(zapsh, api_key)
 
     zap = ZAPv2()
+
+    zap.core.delete_all_alerts(apikey=api_key)
+    zap.core.new_session(target, True, apikey=api_key)
+
+    cid = None
+    uid = None
+    # cid, uid = auth(zap, target, api_key)
+
     # Use the line below if ZAP is not listening on 8090
     # zap = ZAPv2(proxies={'http': 'http://127.0.0.1:8090', 'https': 'http://127.0.0.1:8090'})
     print('Accessing target {0}'.format(target))
     zap.urlopen(target)
     time.sleep(2)
 
-    zap.core.delete_all_alerts(apikey=api_key)
-    zap.core.new_session(target, True, apikey=api_key)
-
-    try:
-
-        if spider:
+    if spider:
+        if cid and uid:
+            run_spider(zap, target, api_key, cid, uid)
+        else:
             run_spider(zap, target, api_key)
-            time.sleep(5)
+        time.sleep(5)
 
-        if active_scan:
-            run_active_scan(zap, target, api_key)
-            time.sleep(5)
+    if active_scan:
+        run_active_scan(zap, target, api_key)
+        time.sleep(5)
 
-        print('Hosts: ' + ', '.join(zap.core.hosts))
+    print('Hosts: ' + ', '.join(zap.core.hosts))
 
-        alerts = zap.core.alerts()
+    alerts = zap.core.alerts()
 
-        if html_report is not None or xml_report is not None:
-            reporttype = None
-            report_file = None
-            if html_report is not None:
-                reporttype = 'html'
-                report_file = html_report
-            elif xml_report is not None:
-                reporttype = 'xml'
-                report_file = xml_report
-            gen_report(zap, api_key, alerts, reporttype, report_file, force)
-    except Exception as e:
-        print('Something went wrong: {0}'.format(e))
-    finally:
-        if stop:
-            stop_zap()
+    if html_report is not None or xml_report is not None:
+        reporttype = None
+        report_file = None
+        if html_report is not None:
+            reporttype = 'html'
+            report_file = html_report
+        elif xml_report is not None:
+            reporttype = 'xml'
+            report_file = xml_report
+        gen_report(zap, api_key, alerts, reporttype, report_file, force)
 
 
 if __name__ == '__main__':
