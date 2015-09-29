@@ -8,12 +8,9 @@ import time
 import signal
 from pprint import pprint
 import argparse
-import json
 import os
 import os.path
-import re
-import jinja2
-import codecs
+import subprocess
 
 try:
     from zapv2 import ZAPv2
@@ -102,12 +99,30 @@ def gen_report(zap, api_key, alerts, reporttype, report_file, force=False):
     except Exception as e:
         print('Error: Unable to save {1} report: {0}'.format(e, reporttype.upper()))
 
+def start_zap():
+    """
+    starts zap
+    """
+    print('Starting ZAP ...')
+    subprocess.Popen(['/zap/zap.sh', '-config', 'api.key=zap', '-daemon'], stdout=open(os.devnull, 'w'))
+    print('Waiting for ZAP to load, 10 seconds ...')
+    print('Use api-key "zap" to interact with my API ...')
+    time.sleep(10)
+
+def stop_zap(zap):
+    """
+    stops zap
+    """
+    zap.core.shutdown()
+
 
 def main(args=None):
     """
     main function
     """
     if args is not None:
+        start = args.start
+        stop = args.stop
         target = args.target
         api_key = args.api_key
         spider = args.spider
@@ -119,6 +134,9 @@ def main(args=None):
         print('No arguments supplied. Exiting')
         sys.exit(1)
 
+    if start:
+        start_zap()
+
     zap = ZAPv2()
     # Use the line below if ZAP is not listening on 8090
     # zap = ZAPv2(proxies={'http': 'http://127.0.0.1:8090', 'https': 'http://127.0.0.1:8090'})
@@ -129,35 +147,51 @@ def main(args=None):
     zap.core.delete_all_alerts(apikey=api_key)
     zap.core.new_session(target, True, apikey=api_key)
 
-    if spider:
-        run_spider(zap, target, api_key)
-        time.sleep(5)
+    try:
 
-    if active_scan:
-        run_active_scan(zap, target, api_key)
-        time.sleep(5)
+        if spider:
+            run_spider(zap, target, api_key)
+            time.sleep(5)
 
-    print('Hosts: ' + ', '.join(zap.core.hosts))
+        if active_scan:
+            run_active_scan(zap, target, api_key)
+            time.sleep(5)
 
-    alerts = zap.core.alerts()
+        print('Hosts: ' + ', '.join(zap.core.hosts))
 
-    if html_report is not None or xml_report is not None:
-        reporttype = None
-        report_file = None
-        if html_report is not None:
-            reporttype = 'html'
-            report_file = html_report
-        elif xml_report is not None:
-            reporttype = 'xml'
-            report_file = xml_report
-        gen_report(zap, api_key, alerts, reporttype, report_file, force)
+        alerts = zap.core.alerts()
 
+        if html_report is not None or xml_report is not None:
+            reporttype = None
+            report_file = None
+            if html_report is not None:
+                reporttype = 'html'
+                report_file = html_report
+            elif xml_report is not None:
+                reporttype = 'xml'
+                report_file = xml_report
+            gen_report(zap, api_key, alerts, reporttype, report_file, force)
+    except Exception as e:
+        print('Something went wrong: {0}'.format(e))
+    finally:
+        if stop:
+            stop_zap()
 
 if __name__ == '__main__':
 
     signal.signal(signal.SIGINT, signal_handler)
 
     parser = argparse.ArgumentParser()
+
+    parser.add_argument('--start',
+                        help="Start ZAP locally",
+                        action='store_true',
+                        required=False)
+
+    parser.add_argument('--stop',
+                        help="Stop ZAP locally when scan completed",
+                        action='store_true',
+                        required=False)
 
     parser.add_argument('-t', '--target', '-u', '--url',
                         help="The target / url to scan (https://scanme.domain.com)",
