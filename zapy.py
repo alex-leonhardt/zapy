@@ -6,11 +6,11 @@ from __future__ import print_function
 import sys
 import time
 import signal
-from pprint import pprint
 import argparse
 import os
 import os.path
 import subprocess
+from urlparse import urlparse
 
 try:
     from zapv2 import ZAPv2, ZapError
@@ -46,6 +46,7 @@ def run_spider(zap, target, api_key, cid=None, uid=None):
     if cid and uid:
         try:
             z = zap.spider.scan_as_user(url=target, contextid=cid, userid=uid, maxchildren=0, apikey=api_key)
+            print (z)
         except Exception as e:
             print('Exception: {0}'.format(e))
     else:
@@ -111,42 +112,41 @@ def gen_report(zap, api_key, alerts, reporttype, report_file, force=False):
         print('Error: Unable to save {1} report: {0}'.format(e, reporttype.upper()))
 
 
-def auth(zap, target, api_key):
+def auth(zap, target, api_key, authuser=None, authpass=None):
     """
     Setting authentication
     """
     # Set the context. Probably useful to have it outside?
-    cname = "context"
+
+    p = urlparse(target)
+    cname = p.hostname
     cid = zap.context.new_context(cname)
 
     # Set the session management info to HTTP based
     ret = zap.sessionManagement.set_session_management_method(cid, "httpAuthSessionManagement", apikey=api_key)
-    print(ret)
 
-    ret = zap.authentication.set_authentication_method(cid, 'httpAuthentication', 'hostname={0}&realm=Restricted'.format(target.split('/')[2]), apikey=api_key)
-    print(ret)
-
-    ret = zap.authentication.set_logged_out_indicator(cid, 'Unauthorized', api_key)
-    print(ret)
+    p = urlparse(target)
+    ret = zap.authentication.set_authentication_method(cid, 'httpAuthentication', 'hostname={0}&port={1}&realm='.format(p.hostname, p.port), apikey=api_key)
+    ret = zap.authentication.set_logged_out_indicator(cid, '401', api_key)
 
     # Add the user "profile"
-    uid = zap.users.new_user(cid, "bobby", apikey=api_key)
+    uid = zap.users.new_user(cid, "admin", apikey=api_key)
     ret = zap.forcedUser.set_forced_user(cid, uid, api_key)
-    print(ret)
 
     ret = zap.forcedUser.set_forced_user_mode_enabled(True, api_key)
 
     # Setting auth credentials. Parameters must be x-www-urlencoded.
-    ret = zap.users.set_authentication_credentials(cid, uid, 'username=bobby&password=supersecret', apikey=api_key)
-    print(ret)
+    ret = zap.users.set_authentication_credentials(cid,
+                                                   uid,
+                                                   'username={authuser}&password={authpass}'.format(
+                                                       authuser=authuser, authpass=authpass
+                                                   ),
+                                                   apikey=api_key)
 
     ret = zap.users.set_user_enabled(cid, uid, True, apikey=api_key)
-    print(ret)
+    ret = zap.context.include_in_context(cname, '\Q{0}\E.*'.format(target), apikey=api_key)
 
-    ret = zap.context.include_in_context(cname, target, apikey=api_key)
-    print(ret)
-
-    return cid, uid
+    return zap
 
 
 def start_zap(zapsh='/zap/weekly/zap.sh', apikey='zap'):
@@ -174,6 +174,9 @@ def main(args=None):
     if args is not None:
         start = args.start
         stop = args.stop
+        useauth = args.auth
+        authuser = args.authuser
+        authpass = args.authpass
         zapsh = args.zapsh
         target = args.target
         api_key = args.api_key
@@ -186,6 +189,16 @@ def main(args=None):
         print('No arguments supplied. Exiting')
         sys.exit(1)
 
+    if useauth:
+        if not authuser:
+            print ("Missing --authuser parameter")
+            print("Exiting.")
+            sys.exit(1)
+        if not authpass:
+            print ("Missing --authpass parameter")
+            print ("Exiting.")
+            sys.exit(1)
+
     if start:
         start_zap(zapsh, api_key)
 
@@ -196,11 +209,13 @@ def main(args=None):
 
     cid = None
     uid = None
-    # cid, uid = auth(zap, target, api_key)
+
+    if useauth:
+        zap = auth(zap, target, api_key, authuser, authpass)
 
     # Use the line below if ZAP is not listening on 8090
     # zap = ZAPv2(proxies={'http': 'http://127.0.0.1:8090', 'https': 'http://127.0.0.1:8090'})
-    print('Accessing target {0}'.format(target))
+
     zap.urlopen(target)
     time.sleep(2)
 
@@ -230,6 +245,9 @@ def main(args=None):
             report_file = xml_report
         gen_report(zap, api_key, alerts, reporttype, report_file, force)
 
+    if stop:
+        stop_zap(zap)
+
 
 if __name__ == '__main__':
 
@@ -245,6 +263,19 @@ if __name__ == '__main__':
     parser.add_argument('--stop',
                         help="Stop ZAP locally when scan completed",
                         action='store_true',
+                        required=False)
+
+    parser.add_argument('--auth',
+                        help="Use authentication (basic auth for now only)",
+                        action='store_true',
+                        required=False)
+
+    parser.add_argument('--authuser',
+                        help="Use this user for authentication (required: when --auth is used)",
+                        required=False)
+
+    parser.add_argument('--authpass',
+                        help="Use this password for specified user (required: when --auth is used)",
                         required=False)
 
     parser.add_argument('--zapsh',
