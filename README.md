@@ -72,7 +72,7 @@ and
 --authpass
 ```
 
-Only for HTTP Basic Authentication is currently working
+*Only HTTP Basic Authentication is currently working*
 
 
 ## html reports
