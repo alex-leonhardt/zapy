@@ -56,17 +56,23 @@ this is now working, use ```-a``` to launch an attack against ```TARGET```
 
 you're now able to configure basic auth to a target by setting 
 
-```--auth``` 
+```
+--auth
+``` 
 
 this will require you to also specify 
 
-```--authuser``` (the user you want to authenticate with) 
+```
+--authuser
+``` 
 
 and 
 
-```--authpass``` (the password for that user)
+```
+--authpass
+```
 
-*Only for HTTP Basic Authentication is currently working*
+Only for HTTP Basic Authentication is currently working
 
 
 ## html reports
