@@ -66,7 +66,7 @@ and
 
 ```--authpass``` (the password for that user)
 
-*Only for HTTP Basic Authentication is currently working!*
+*Only for HTTP Basic Authentication is currently working*
 
 
 ## html reports
