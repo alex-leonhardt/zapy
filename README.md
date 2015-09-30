@@ -52,6 +52,18 @@ spidering now works, use ```-s``` to run the spider against ```TARGET```
 
 this is now working, use ```-a``` to launch an attack against ```TARGET```
 
+## basic auth
+
+you're now able to configure basic auth to a target by setting 
+
+```--auth``` 
+
+this will require you to also specify 
+
+```--authuser``` and ```--authpass```
+
+*Only for HTTP Basic Authentication is currently working!*
+
 ## html reports
 
 use ```--html-report /path/to/report.html``` to create a report in /path/to

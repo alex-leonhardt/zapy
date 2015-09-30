@@ -22,7 +22,7 @@ except ImportError:
 __author__ = 'ale'
 __package__ = 'zapy'
 __doc__ = """
-ZapIt is a python script that used the ZAP python API to interact with a headless Zed Attack Proxy.
+Zapy is a python script that used the ZAP python API to interact with a headless Zed Attack Proxy.
 Mainly useful to automate runs.
 """
 
