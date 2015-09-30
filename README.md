@@ -60,9 +60,14 @@ you're now able to configure basic auth to a target by setting
 
 this will require you to also specify 
 
-```--authuser``` and ```--authpass```
+```--authuser``` (the user you want to authenticate with) 
+
+and 
+
+```--authpass``` (the password for that user)
 
 *Only for HTTP Basic Authentication is currently working!*
+
 
 ## html reports
 
