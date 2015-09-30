@@ -89,12 +89,14 @@ docker build -t me/zap:latest .
 
 #### run it
 
+```
 docker run --rm -ti -v `pwd`:/data me/zap python /zapy/zapy.py \
     -t http://172.17.0.10 \
     -s \
     --start \
     -k zap \
     --html-report /data/report.html
+```
 
 ## todo
 
